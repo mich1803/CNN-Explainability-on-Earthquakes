@@ -1,0 +1,16 @@
+h5py
+numpy
+matplotlib
+scipy
+librosa
+pandas
+tqdm
+opencv-python
+torch
+shap
+torchvision
+lightning
+torchmetrics
+pytorch-lightning
+scikit-learn
+seaborn
