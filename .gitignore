@@ -4,5 +4,3 @@ CNN_EQML
 preprocessed_dset
 preprocessed_dset.zip
 training/lightning_logs
-training/p_wave_model_checkpoints
-training/s_wave_model_checkpoints
