@@ -25,7 +25,6 @@ torch.cuda.manual_seed_all(SEED)
 torch.backends.cudnn.deterministic = True
 torch.backends.cudnn.benchmark = False
 pl.seed_everything(SEED)
-print("Seed has been set")
 
 def calculate_and_save_stats(train_data_path, stats_file):
     print("Calculating dataset statistics for normalization...")

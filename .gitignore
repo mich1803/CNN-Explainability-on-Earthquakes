@@ -4,3 +4,4 @@ CNN_EQML
 preprocessed_dset
 preprocessed_dset.zip
 training/lightning_logs
+training
