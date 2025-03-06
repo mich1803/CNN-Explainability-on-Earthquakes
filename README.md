@@ -36,6 +36,11 @@ So the four models are:
   - Load the previously traained models.
   - Compute single-event shap tensor or batch mean shap tensors. 
 
+### Plots of SHAP tensor examples
+- Single SHAP with RGB event on background:
+        ![single_example](media/single_example.png)
+- Mean SHAP with white background:
+        ![mean_example](media/mean_example.png)
 
 ## How to Use  
 
