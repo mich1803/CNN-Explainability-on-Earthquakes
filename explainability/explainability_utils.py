@@ -119,12 +119,14 @@ def compute_mean_shap_tensor(model, dloader, dim, device, max_evals = 1000, mask
     return mean_shap_tensor
     
 
-def plot_shap(shap_tensor, onechannel, background, ft, label=None, name=None, model_output=None, spec_type="p64", mean = False, figsize=(15, 7)):
+def plot_shap(shap_tensor, onechannel, background, ft, alpha_normalizer=None, label=None, name=None, model_output=None, spec_type="p64", mean = False, figsize=(15, 7)):
     f, t = (ft[0], ft[1]) if spec_type[-2:] else (ft[2], ft[3]) # ft = [f64, t64, f32, t32]
     if spec_type[0] == 's':
         t = (0,20)
     if onechannel:
         grayscale_shap_tensor = np.mean(shap_tensor, axis=-1)
+        if not alpha_normalizer:
+            alpha_normalizer = np.max(np.abs(grayscale_shap_tensor))
         plt.figure(figsize=figsize)
         plt.xlabel('Time [s]')
         plt.ylabel('Frequency [Hz]')
@@ -140,7 +142,7 @@ def plot_shap(shap_tensor, onechannel, background, ft, label=None, name=None, mo
         im = plt.imshow(
                         grayscale_shap_tensor, 
                         cmap="coolwarm", 
-                        alpha=np.abs(grayscale_shap_tensor)/np.max(np.abs(grayscale_shap_tensor)), 
+                        alpha=np.abs(grayscale_shap_tensor)/alpha_normalizer, 
                         aspect='auto', 
                         origin='lower', 
                         extent=[*t, *f]
@@ -156,6 +158,8 @@ def plot_shap(shap_tensor, onechannel, background, ft, label=None, name=None, mo
 
     if not onechannel:
         fig, axes = plt.subplots(3, 1, figsize=figsize, sharex=True)
+        if not alpha_normalizer:
+            alpha_normalizer = np.max(np.abs(grayscale_shap_tensor))
         if not mean:
             plt.suptitle(f"SHAP on the three components ({name})\n Model output: {model_output.cpu().detach().numpy()} --> Label: {'Aftershock' if label else 'Foreshock'}")
         else:
@@ -173,7 +177,7 @@ def plot_shap(shap_tensor, onechannel, background, ft, label=None, name=None, mo
             im = axes[i].imshow(
                                 shap_tensor[:,:,i],
                                 cmap = "coolwarm",
-                                alpha = np.abs(shap_tensor[:,:,i])/np.max(np.abs(shap_tensor)),
+                                alpha = np.abs(shap_tensor[:,:,i])/alpha_normalizer,
                                 aspect = "auto",
                                 origin = "lower",
                                 extent = [*t, *f]
