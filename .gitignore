@@ -1,6 +1,7 @@
 dset
 __pycache__
 CNN_EQML
+preprocessed_dset
 preprocessed_dset_1
 preprocessed_dset_2
 preprocessed_dset.zip
