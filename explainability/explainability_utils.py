@@ -25,17 +25,25 @@ torch.backends.cudnn.benchmark = False
 pl.seed_everything(SEED)
 
 # Setting for the datasets
-mean_64, std_64 = spectra_stats(os.path.join("../preprocessed_dset/sp_64", "train"))
-mean_32, std_32 = spectra_stats(os.path.join("../preprocessed_dset/sp_32", "train"))
+mean_64_08, std_64_08 = spectra_stats(os.path.join("../preprocessed_dset_1/sp_64", "train"))
+mean_64_05, std_64_05 = spectra_stats(os.path.join("../preprocessed_dset_2/sp_64", "train"))
+mean_32_08, std_32_08 = spectra_stats(os.path.join("../preprocessed_dset_2/sp_32", "train"))
+mean_32_05, std_32_05 = spectra_stats(os.path.join("../preprocessed_dset_1/sp_32", "train"))
 
 def prepare_image_for_plot(image, spec_type):
     # Converte il tensore PyTorch in un array NumPy
-    if spec_type[-2:] == "64":
-        mean = mean_64
-        std = std_64
-    elif spec_type[-2:] == "32":
-        mean = mean_32
-        std = std_32
+    if spec_type[-5:] == "64_08":
+        mean = mean_64_08
+        std = std_64_08
+    elif spec_type[-5:] == "64_05":
+        mean = mean_64_05
+        std = std_64_05
+    elif spec_type[-5:] == "32_08":
+        mean = mean_32_08
+        std = std_32_08
+    elif spec_type[-5:] == "32_05":
+        mean = mean_32_05
+        std = std_32_05
     else:
         raise ValueError("Invalid spec_type")
     
@@ -119,18 +127,21 @@ def compute_mean_shap_tensor(model, dloader, dim, device, max_evals = 1000, mask
     return mean_shap_tensor
     
 
-def plot_shap(shap_tensor, onechannel, background, ft, alpha_normalizer=None, label=None, name=None, model_output=None, spec_type="p64", mean = False, figsize=(15, 7)):
-    f, t = (ft[0], ft[1]) if spec_type[-2:] else (ft[2], ft[3]) # ft = [f64, t64, f32, t32]
+def plot_shap(shap_tensor, onechannel, background, ft, alpha_min=None, alpha_max=None, label=None, name=None, model_output=None, spec_type="p64_08", mean = False, figsize=(15, 7)):
+    f, t = (ft[0], ft[1]) if spec_type[-5:-3] else (ft[2], ft[3]) # ft = [f64, t64, f32, t32]
     if spec_type[0] == 's':
         t = (0,20)
     if onechannel:
         grayscale_shap_tensor = np.mean(shap_tensor, axis=-1)
-        if not alpha_normalizer:
-            alpha_normalizer = np.max(np.abs(grayscale_shap_tensor))
+        if not alpha_max:
+            alpha_max = np.max(np.abs(grayscale_shap_tensor))
+        if not alpha_min:
+            alpha_min = np.min(np.abs(grayscale_shap_tensor))
+        alpha_normalizer = max(np.abs(alpha_min), np.abs(alpha_max))
         plt.figure(figsize=figsize)
         plt.xlabel('Time [s]')
         plt.ylabel('Frequency [Hz]')
-        plt.axvline(5, c='black', label = f'{spec_type[0]}-wave arrival')
+        plt.axvline(5, c='black', label = f'{spec_type[0]}-wave arrival', lw = 2, alpha = .2)
         if background != None:
             bg_image = prepare_image_for_plot(background, spec_type)
             plt.imshow(
@@ -142,10 +153,12 @@ def plot_shap(shap_tensor, onechannel, background, ft, alpha_normalizer=None, la
         im = plt.imshow(
                         grayscale_shap_tensor, 
                         cmap="coolwarm", 
-                        alpha=np.abs(grayscale_shap_tensor)/alpha_normalizer, 
+                        alpha=np.clip(np.abs(grayscale_shap_tensor)/alpha_normalizer, 0, 1), 
                         aspect='auto', 
                         origin='lower', 
-                        extent=[*t, *f]
+                        extent=[*t, *f],
+                        vmin=alpha_min,  # Fix color range
+                        vmax=alpha_max
                         )
         cbar = plt.colorbar(im, orientation="horizontal", pad=0.1)
         cbar.set_label("Contribution to the prediction")
@@ -158,8 +171,11 @@ def plot_shap(shap_tensor, onechannel, background, ft, alpha_normalizer=None, la
 
     if not onechannel:
         fig, axes = plt.subplots(3, 1, figsize=figsize, sharex=True)
-        if not alpha_normalizer:
-            alpha_normalizer = np.max(np.abs(grayscale_shap_tensor))
+        if not alpha_max:
+            alpha_max = np.max(np.abs(grayscale_shap_tensor))
+        if not alpha_min:
+            alpha_min = np.min(np.abs(grayscale_shap_tensor))
+        alpha_normalizer = max(np.abs(alpha_min), np.abs(alpha_max))
         if not mean:
             plt.suptitle(f"SHAP on the three components ({name})\n Model output: {model_output.cpu().detach().numpy()} --> Label: {'Aftershock' if label else 'Foreshock'}")
         else:
@@ -177,13 +193,15 @@ def plot_shap(shap_tensor, onechannel, background, ft, alpha_normalizer=None, la
             im = axes[i].imshow(
                                 shap_tensor[:,:,i],
                                 cmap = "coolwarm",
-                                alpha = np.abs(shap_tensor[:,:,i])/alpha_normalizer,
+                                alpha = np.clip(np.abs(shap_tensor[:,:,i])/alpha_normalizer, 0, 1),
                                 aspect = "auto",
                                 origin = "lower",
-                                extent = [*t, *f]
+                                extent = [*t, *f],
+                                vmin=alpha_min,  # Fix color range
+                                vmax=alpha_max
                                 )
             axes[i].set_ylabel("Freuqency (Hz)")
-            axes[i].axvline(5, c='black', label=f'{spec_type[0]}-wave arrival')
+            axes[i].axvline(5, c='black', label=f'{spec_type[0]}-wave arrival', lw = 2, alpha = .2)
             axes[i].set_yticks(np.linspace(*f, num=6))  # Adjust number of ticks as needed
             axes[i].set_yticklabels([f"{freq:.1f}" for freq in np.linspace(*f, num=6)])  # Format frequency labels
 
