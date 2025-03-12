@@ -127,7 +127,7 @@ def compute_mean_shap_tensor(model, dloader, dim, device, max_evals = 1000, mask
     return mean_shap_tensor
     
 
-def plot_shap(shap_tensor, onechannel, background, ft, alpha_min=None, alpha_max=None, label=None, name=None, model_output=None, spec_type="p64_08", mean = False, figsize=(15, 7)):
+def plot_shap(shap_tensor, onechannel, background, ft, alpha_min=None, hist=None, alpha_max=None, label=None, name=None, model_output=None, spec_type="p64_08", mean = False, figsize=(15, 7)):
     f, t = (ft[0], ft[1]) if spec_type[-5:-3] else (ft[2], ft[3]) # ft = [f64, t64, f32, t32]
     if spec_type[0] == 's':
         t = (0,20)
@@ -160,6 +160,8 @@ def plot_shap(shap_tensor, onechannel, background, ft, alpha_min=None, alpha_max
                         vmin=alpha_min,  # Fix color range
                         vmax=alpha_max
                         )
+        if isinstance(hist, np.ndarray) and hist.size > 0:
+            plt.hist(hist, bins=100, alpha=0.2, color = "black", label=f"Distribution of {'s' if spec_type[0] == 'p' else 'p'}-wave arrival")
         cbar = plt.colorbar(im, orientation="horizontal", pad=0.1)
         cbar.set_label("Contribution to the prediction")
         plt.legend()
