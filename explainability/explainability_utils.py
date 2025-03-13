@@ -79,7 +79,7 @@ def inverse_preprocess_for_shap(shap_images, original_min, original_max):
     
     return shap_images
 
-def compute_shap_tensor(model, sample, dim, device, max_evals=1000, masker_settings="inpaint_telea"):
+def compute_shap_tensor(model, sample, dim, device, max_evals=1000, masker_settings="inpaint_telea", save_path = False):
 
     images, _, _ = sample
 
@@ -111,7 +111,12 @@ def compute_shap_tensor(model, sample, dim, device, max_evals=1000, masker_setti
         outputs=shap.Explanation.argsort.flip[:1]
         )
     
-    return np.array(shap_values.values).squeeze(axis=-1)
+    shap_tensor = np.array(shap_values.values).squeeze(axis=-1)
+
+    if save_path:
+        np.save(save_path, shap_tensor) 
+        
+    return shap_tensor
 
 def compute_mean_shap_tensor(model, dloader, dim, device, max_evals = 1000, masker_settings = "inpaint_telea", save_path = None):
 
@@ -127,7 +132,21 @@ def compute_mean_shap_tensor(model, dloader, dim, device, max_evals = 1000, mask
     return mean_shap_tensor
     
 
-def plot_shap(shap_tensor, onechannel, background, ft, alpha_min=None, hist=None, alpha_max=None, label=None, name=None, model_output=None, spec_type="p64_08", mean = False, figsize=(15, 7)):
+def plot_shap(shap_tensor, 
+              onechannel, 
+              background, 
+              ft, 
+              alpha_min=None, 
+              hist=None, 
+              alpha_max=None, 
+              label=None, 
+              name=None, 
+              model_output=None, 
+              spec_type="p64_08", 
+              mean = False, 
+              figsize=(15, 7)):
+    
+
     f, t = (ft[0], ft[1]) if spec_type[-5:-3] else (ft[2], ft[3]) # ft = [f64, t64, f32, t32]
     if spec_type[0] == 's':
         t = (0,20)
@@ -211,3 +230,63 @@ def plot_shap(shap_tensor, onechannel, background, ft, alpha_min=None, hist=None
         axes[0].legend(loc="upper right")
         axes[-1].set_xlabel("Time (s)")
 
+def plot_wf_shap(shap_tensor = None, 
+                 spectrogram = None, 
+                 waveform = None, 
+                 alt_wave = None,
+                 ft = None,
+                 alpha_min = None,
+                 alpha_max = None,
+                 label = None,
+                 day = None,
+                 spec_type = "p64_08",
+                 figsize = (15, 7)):
+    
+    f, t = (ft[0], ft[1]) if spec_type[-5:-3] else (ft[2], ft[3]) # ft = [f64, t64, f32, t32]
+    if spec_type[0] == 's':
+        t = (0,20)
+    if not alpha_max:
+        alpha_max = np.max(shap_tensor)
+    if not alpha_min:
+        alpha_min = np.min(shap_tensor)
+    alpha_normalizer = max(np.abs(alpha_min), np.abs(alpha_max))
+    
+    grayscale_shap_tensor = np.mean(shap_tensor, axis=-1)
+
+    fig, axes = plt.subplots(nrows=4, ncols=1, figsize=figsize)
+    fig.suptitle(f"SHAP on waveform and spectrogram\n Label: {'Aftershock' if label else 'Foreshock'}")
+
+    for ch in range(3):
+        axes[ch].axvline(5, c='black', label=f'{spec_type[0]}-wave arrival', lw = 2, alpha = .2)
+        axes[ch].axvline(alt_wave, c='black', label=f'{'s' if spec_type[0] == 'p' else 'p'}-wave arrival', lw = 2, alpha = .2)
+
+        axes[ch].plot(waveform[ch], lw=1)
+        axes[ch].set_title(f"Channel {ch+1}")
+        axes[ch].set_xlim([0, waveform[ch].shape[0]])
+
+    # Plot the spectrogram in the 4th row
+    # If you have explicit f, t arrays, you can pass them as 'extent=[t[0], t[1], f[0], f[1]]'
+    im = plt.imshow(
+        grayscale_shap_tensor, 
+        cmap="coolwarm", 
+        alpha=np.clip(np.abs(grayscale_shap_tensor)/alpha_normalizer, 0, 1), 
+        aspect='auto', 
+        origin='lower', 
+        extent=[*t, *f],
+        vmin=alpha_min,  # Fix color range
+        vmax=alpha_max
+        )
+    axes[3].imshow(
+        spectrogram,
+        aspect='auto',
+        origin='lower',
+        extent=[t[0], t[1], f[0], f[1]]
+    )
+    axes[3].set_title("Spectrogram")
+    axes[3].axvline(5, c='black', label=f'{spec_type[0]}-wave arrival', lw = 2, alpha = .2)
+    axes[3].axvline(alt_wave, c='black', label=f'{'s' if spec_type[0] == 'p' else 'p'}-wave arrival', lw = 2, alpha = .2)
+    # You can add a colorbar if you like:
+    plt.colorbar(im, ax = axes, orientation='vertical', label="Contribution to the prediction")
+
+    plt.tight_layout()
+    plt.show()
