@@ -247,6 +247,7 @@ def plot_wf_shap(shap_tensor = None,
                  figsize = (15, 20)):
     spectrogram = prepare_image_for_plot(spectrogram, spec_type)
     f, t = (ft[0], ft[1]) if spec_type[-5:-3] else (ft[2], ft[3]) # ft = [f64, t64, f32, t32]
+    t_ = t
     if spec_type[0] == 's':
         t = (0,20)
     if not alpha_max:
@@ -270,7 +271,7 @@ def plot_wf_shap(shap_tensor = None,
         axes[ch].axvline(5, c='green', lw=2, alpha=1)
         axes[ch].axvline(alt_wave, c='green', ls = "dotted", lw=2, alpha=1)
 
-        axes[ch].plot(np.linspace(t[0], t[1], waveform[ch].shape[0]), waveform[ch], lw=1, color="black", label = label_dict[ch])  
+        axes[ch].plot(np.linspace(t_[0], t_[1], waveform[ch].shape[0]), waveform[ch], lw=1, color="black", label = label_dict[ch])  
         axes[ch].set_xlim(t)  # Ensures x-axis is properly aligned with the last plot
         axes[ch].legend(loc="upper right")
         axes[ch].set_ylim([-maxy, maxy])
