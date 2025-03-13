@@ -161,7 +161,7 @@ def plot_shap(shap_tensor,
         plt.xlabel('Time [s]')
         plt.ylabel('Frequency [Hz]')
         plt.axvline(5, c='black', label = f'{spec_type[0]}-wave arrival', lw = 2, alpha = .2)
-        if background != None:
+        if isinstance(background, np.ndarray):
             bg_image = prepare_image_for_plot(background, spec_type)
             plt.imshow(
                         bg_image, 
@@ -185,7 +185,7 @@ def plot_shap(shap_tensor,
         cbar.set_label("Contribution to the prediction")
         plt.legend()
         if not mean:
-            plt.title(f"SHAP on 1-channel mean ({name})\n Model output: {model_output.cpu().detach().numpy()} --> Label: {'Aftershock' if label else 'Foreshock'}")
+            plt.title(f"SHAP on 1-channel mean ({name})\n Model output: {model_output} --> Label: {'Aftershock' if label else 'Foreshock'}")
         else:
             plt.title(mean)
         plt.show()
@@ -198,7 +198,7 @@ def plot_shap(shap_tensor,
             alpha_min = np.min(np.abs(grayscale_shap_tensor))
         alpha_normalizer = max(np.abs(alpha_min), np.abs(alpha_max))
         if not mean:
-            plt.suptitle(f"SHAP on the three components ({name})\n Model output: {model_output.cpu().detach().numpy()} --> Label: {'Aftershock' if label else 'Foreshock'}")
+            plt.suptitle(f"SHAP on the three components ({name})\n Model output: {model_output} --> Label: {'Aftershock' if label else 'Foreshock'}")
         else:
             plt.suptitle(mean)
         for i in range(3):
@@ -239,9 +239,13 @@ def plot_wf_shap(shap_tensor = None,
                  alpha_max = None,
                  label = None,
                  day = None,
+                 week = None,
+                 name = None,
                  spec_type = "p64_08",
-                 figsize = (15, 7)):
-    
+                 show = True,
+                 save_path = False,
+                 figsize = (15, 20)):
+    spectrogram = prepare_image_for_plot(spectrogram, spec_type)
     f, t = (ft[0], ft[1]) if spec_type[-5:-3] else (ft[2], ft[3]) # ft = [f64, t64, f32, t32]
     if spec_type[0] == 's':
         t = (0,20)
@@ -253,20 +257,35 @@ def plot_wf_shap(shap_tensor = None,
     
     grayscale_shap_tensor = np.mean(shap_tensor, axis=-1)
 
-    fig, axes = plt.subplots(nrows=4, ncols=1, figsize=figsize)
-    fig.suptitle(f"SHAP on waveform and spectrogram\n Label: {'Aftershock' if label else 'Foreshock'}")
+    fig, axes = plt.subplots(nrows=4, ncols=1, figsize=figsize, gridspec_kw={'height_ratios': [1.5, 1.5, 1.5, 4], 'hspace': 0.2}, sharex=True)
+    fig.suptitle(f"SHAP on waveform and spectrogram\n label: {'Aftershock' if label == 'post' else 'Foreshock'},   trace_name = {name}, \n date = {day} (week: {week})")
+
+    label_dict = {0: "HHE", 1: "HHN", 2: "HHZ"}
+
+    maxy = np.max(waveform)
 
     for ch in range(3):
-        axes[ch].axvline(5, c='black', label=f'{spec_type[0]}-wave arrival', lw = 2, alpha = .2)
-        axes[ch].axvline(alt_wave, c='black', label=f'{'s' if spec_type[0] == 'p' else 'p'}-wave arrival', lw = 2, alpha = .2)
+        axes[ch].ticklabel_format(axis="y", style="sci", scilimits=(0, 0))
 
-        axes[ch].plot(waveform[ch], lw=1)
-        axes[ch].set_title(f"Channel {ch+1}")
-        axes[ch].set_xlim([0, waveform[ch].shape[0]])
+        axes[ch].axvline(5, c='green', lw=2, alpha=1)
+        axes[ch].axvline(alt_wave, c='green', ls = "dotted", lw=2, alpha=1)
 
+        axes[ch].plot(np.linspace(t[0], t[1], waveform[ch].shape[0]), waveform[ch], lw=1, color="black", label = label_dict[ch])  
+        axes[ch].set_xlim(t)  # Ensures x-axis is properly aligned with the last plot
+        axes[ch].legend(loc="upper right")
+        axes[ch].set_ylim([-maxy, maxy])
+
+    axes[1].set_ylabel("npts")
     # Plot the spectrogram in the 4th row
-    # If you have explicit f, t arrays, you can pass them as 'extent=[t[0], t[1], f[0], f[1]]'
-    im = plt.imshow(
+    
+    axes[3].imshow(
+        spectrogram,
+        aspect='auto',
+        origin='lower',
+        extent=[t[0], t[1], f[0], f[1]]
+    )
+
+    im = axes[3].imshow(
         grayscale_shap_tensor, 
         cmap="coolwarm", 
         alpha=np.clip(np.abs(grayscale_shap_tensor)/alpha_normalizer, 0, 1), 
@@ -276,17 +295,16 @@ def plot_wf_shap(shap_tensor = None,
         vmin=alpha_min,  # Fix color range
         vmax=alpha_max
         )
-    axes[3].imshow(
-        spectrogram,
-        aspect='auto',
-        origin='lower',
-        extent=[t[0], t[1], f[0], f[1]]
-    )
-    axes[3].set_title("Spectrogram")
-    axes[3].axvline(5, c='black', label=f'{spec_type[0]}-wave arrival', lw = 2, alpha = .2)
-    axes[3].axvline(alt_wave, c='black', label=f'{'s' if spec_type[0] == 'p' else 'p'}-wave arrival', lw = 2, alpha = .2)
-    # You can add a colorbar if you like:
+    
+    axes[3].axvline(5, c='green', label=f'{spec_type[0]}-wave arrival', lw = 2, alpha = 1)
+    axes[3].axvline(alt_wave, c='green', ls = "dotted", label=f"{'s' if spec_type[0] == 'p' else 'p'}-wave arrival", lw = 2, alpha = 1)
+    axes[3].legend(loc="upper right")
+    axes[3].set_ylabel("Frequency [Hz]")
+    plt.xlabel('Time [s]')
+    
     plt.colorbar(im, ax = axes, orientation='vertical', label="Contribution to the prediction")
-
-    plt.tight_layout()
-    plt.show()
+    if show:
+        plt.show()
+    if save_path:
+        plt.savefig(save_path, dpi=300, bbox_inches='tight')  # Save if a path is provided
+        plt.close(fig)  # Close the figure to free memory
