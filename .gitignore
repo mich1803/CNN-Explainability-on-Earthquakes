@@ -1,0 +1,8 @@
+dset
+__pycache__
+CNN_EQML
+preprocessed_dset
+training/lightning_logs
+training/__pycache__
+preprocess/__pycache__
+explainability/__pycache__
