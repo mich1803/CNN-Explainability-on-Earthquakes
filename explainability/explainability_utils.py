@@ -102,28 +102,27 @@ def compute_shap_tensor(model, sample, dim, device, max_evals=1000, masker_setti
     return shap_tensor
     
 
-def plot_mean_shap(mean_shap_tensor,  
+def plot_mean_shap_p(mean_shap_tensor,  
               ft, 
               hist=None, 
               alpha_min=None, 
               alpha_max=None, 
-              type = 'p',
               title = False, 
-              figsize=(15, 7)):
+              figsize=(15, 7),
+              save_path = False):
     
-
-    f, t = (ft[0], ft[1]) 
-
+    f, t = ft
 
     if not alpha_max:
         alpha_max = np.max(np.abs(mean_shap_tensor))
     if not alpha_min:
         alpha_min = np.min(np.abs(mean_shap_tensor))
     alpha_normalizer = max(np.abs(alpha_min), np.abs(alpha_max))
+
     plt.figure(figsize=figsize)
     plt.xlabel('Time [s]')
     plt.ylabel('Frequency [Hz]')
-    plt.axvline(5, c='black', label = f'{type}-wave arrival', lw = 2, alpha = .2)
+    plt.axvline(5, c='black', label = f'p-wave arrival', lw = 3, alpha = .3)
     im = plt.imshow(
                     mean_shap_tensor, 
                     cmap="coolwarm", 
@@ -135,12 +134,62 @@ def plot_mean_shap(mean_shap_tensor,
                     vmax=alpha_max
                     )
     if isinstance(hist, np.ndarray) and hist.size > 0:
-        plt.hist(hist, bins=100, alpha=0.2, color = "black", label=f"Distribution of {'s' if type == 'p' else 'p'}-wave arrival")
+        plt.hist(hist, bins=100, alpha=0.3, color = "black", label=f"Distribution of s-wave arrival")
     cbar = plt.colorbar(im, orientation="horizontal", pad=0.1)
     cbar.set_label("Contribution to the prediction")
     plt.legend()
     plt.title(title)
-    plt.show()
+
+    if not save_path:
+        plt.show()
+    else:
+        plt.savefig(save_path, dpi=300, bbox_inches='tight')  # Save if a path is provided
+
+
+def plot_mean_shap_s(mean_shap_tensor,  
+              ft, 
+              hist=None, 
+              alpha_min=None, 
+              alpha_max=None, 
+              title = False, 
+              figsize=(15, 7),
+              save_path = False):
+    
+    f, t = ft
+    t = (0, 8)
+
+    if not alpha_max:
+        alpha_max = np.max(np.abs(mean_shap_tensor))
+    if not alpha_min:
+        alpha_min = np.min(np.abs(mean_shap_tensor))
+    alpha_normalizer = max(np.abs(alpha_min), np.abs(alpha_max))
+
+    plt.figure(figsize=figsize)
+    plt.xlabel('Time [s]')
+    plt.ylabel('Frequency [Hz]')
+    plt.axvline(4, c='black', label = f's-wave arrival', lw = 3, alpha = .3)
+    im = plt.imshow(
+                    mean_shap_tensor, 
+                    cmap="coolwarm", 
+                    alpha=np.clip(np.abs(mean_shap_tensor)/alpha_normalizer, 0, 1), 
+                    aspect='auto', 
+                    origin='lower', 
+                    extent=[*t, *f],
+                    vmin=alpha_min,  # Fix color range
+                    vmax=alpha_max
+                    )
+    if isinstance(hist, np.ndarray) and hist.size > 0:
+        plt.hist(hist, bins=100, alpha=0.3, color = "black", label=f"Distribution of p-wave arrival")
+    cbar = plt.colorbar(im, orientation="horizontal", pad=0.1)
+    cbar.set_label("Contribution to the prediction")
+    plt.legend()
+    plt.title(title)
+
+    if not save_path:
+        plt.show()
+    else:
+        plt.savefig(save_path, dpi=300, bbox_inches='tight')  # Save if a path is provided
+
 
 
 def plot_wf_shap(shap_tensor, 
