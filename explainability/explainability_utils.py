@@ -105,6 +105,7 @@ def compute_shap_tensor(model, sample, dim, device, max_evals=1000, masker_setti
 def plot_mean_shap_p(mean_shap_tensor,  
               ft, 
               hist=None, 
+              hist_bins = 50,
               alpha_min=None, 
               alpha_max=None, 
               title = False, 
@@ -134,7 +135,7 @@ def plot_mean_shap_p(mean_shap_tensor,
                     vmax=alpha_max
                     )
     if isinstance(hist, np.ndarray) and hist.size > 0:
-        plt.hist(hist, bins=100, alpha=0.3, color = "black", label=f"Distribution of s-wave arrival")
+        plt.hist(hist, bins=hist_bins, alpha=0.3, color = "black", label=f"Distribution of s-wave arrival")
     cbar = plt.colorbar(im, orientation="horizontal", pad=0.1)
     cbar.set_label("Contribution to the prediction")
     plt.legend()
@@ -144,11 +145,13 @@ def plot_mean_shap_p(mean_shap_tensor,
         plt.show()
     else:
         plt.savefig(save_path, dpi=300, bbox_inches='tight')  # Save if a path is provided
+        plt.close()
 
 
 def plot_mean_shap_s(mean_shap_tensor,  
               ft, 
               hist=None, 
+              hist_bins = 50,
               alpha_min=None, 
               alpha_max=None, 
               title = False, 
@@ -179,7 +182,7 @@ def plot_mean_shap_s(mean_shap_tensor,
                     vmax=alpha_max
                     )
     if isinstance(hist, np.ndarray) and hist.size > 0:
-        plt.hist(hist, bins=100, alpha=0.3, color = "black", label=f"Distribution of p-wave arrival")
+        plt.hist(hist, bins=hist_bins, alpha=0.3, color = "black", label=f"Distribution of p-wave arrival")
     cbar = plt.colorbar(im, orientation="horizontal", pad=0.1)
     cbar.set_label("Contribution to the prediction")
     plt.legend()
@@ -189,6 +192,7 @@ def plot_mean_shap_s(mean_shap_tensor,
         plt.show()
     else:
         plt.savefig(save_path, dpi=300, bbox_inches='tight')  # Save if a path is provided
+        plt.close()
 
 
 
