@@ -62,7 +62,7 @@ def inverse_preprocess_for_shap(shap_images, original_min, original_max):
     
     return shap_images
 
-def compute_shap_tensor(model, sample, dim, device, max_evals=1000, masker_settings="inpaint_telea", save_dir = False):
+def compute_shap_tensor(model, sample, dim, device, max_evals=1000, masker_settings="inpaint_telea", save_dir = False, len_label_channels_shap = 1):
 
     images, _, trace_name, *_ = sample
 
@@ -91,10 +91,13 @@ def compute_shap_tensor(model, sample, dim, device, max_evals=1000, masker_setti
         images_to_explain,
         max_evals=max_evals,
         batch_size=50,
-        outputs=shap.Explanation.argsort.flip[:1]
+        outputs=shap.Explanation.argsort.flip[:len_label_channels_shap]
         )
     
-    shap_tensor = np.array(shap_values.values).squeeze(axis=-1)
+    if len_label_channels_shap == 1:
+        shap_tensor = np.array(shap_values.values).squeeze(axis=-1)
+    else:
+        shap_tensor = np.array(shap_values.values)
 
     if save_dir:
         np.save(os.path.join(save_dir, f"{trace_name[0]}.npy"), shap_tensor) 
@@ -196,80 +199,181 @@ def plot_mean_shap_s(mean_shap_tensor,
 
 
 
-def plot_wf_shap(shap_tensor, 
-                 spectrogram, 
-                 waveform, 
-                 alt_wave,
-                 ft = None,
-                 alpha_min = None,
-                 alpha_max = None,
-                 label = None,
-                 day = None,
-                 week = None,
-                 name = None,
-                 type = "p",
-                 show = True,
-                 save_path = False,
-                 figsize = (15, 20)):
-    spectrogram = prepare_image_for_plot(spectrogram)
+def plot_wf_shap_single(shap_tensor, spectrogram, waveform, alt_wave,
+                         ft=None, alpha_min=None, alpha_max=None, 
+                         title=None, show=True, save_path=False, figsize=(10, 10)):
     f, t = (ft[0], ft[1])
+    const = 100
+    waveform = waveform[:, int(const * t[0]):int(const * t[1])]
 
     if not alpha_max:
         alpha_max = np.max(shap_tensor)
     if not alpha_min:
         alpha_min = np.min(shap_tensor)
     alpha_normalizer = max(np.abs(alpha_min), np.abs(alpha_max))
-    
-    grayscale_shap_tensor = np.mean(shap_tensor, axis=-1)
 
-    fig, axes = plt.subplots(nrows=4, ncols=1, figsize=figsize, gridspec_kw={'height_ratios': [1.5, 1.5, 1.5, 4], 'hspace': 0.2}, sharex=True)
-    fig.suptitle(f"SHAP on waveform and spectrogram\n label: {'Aftershock' if label == 'post' else 'Foreshock'},   trace_name = {name}, \n date = {day} (week: {week})")
+    fig, axes = plt.subplots(nrows=4, ncols=1, figsize=figsize, 
+                             gridspec_kw={'height_ratios': [1.5, 1.5, 1.5, 4], 'hspace': 0.3}, sharex=True)
+    
+    plt.suptitle(title)
+    
+    label_dict = {0: "HHE", 1: "HHN", 2: "HHZ"}
+    maxy = np.max(waveform)
+    
+    for ch in range(3):
+        axes[ch].ticklabel_format(axis="y", style="sci", scilimits=(0, 0))
+        axes[ch].axvline(5, c='green', lw=2, alpha=1)
+        axes[ch].axvline(alt_wave, c='green', ls="dotted", lw=2, alpha=1)
+        axes[ch].plot(np.linspace(t[0], t[1], waveform[ch].shape[0]), waveform[ch], lw=1, color="black", label=label_dict[ch])  
+        axes[ch].set_xlim(t)
+        axes[ch].legend(loc="upper right")
+        axes[ch].set_ylim([-maxy, maxy])
+    
+    axes[1].set_ylabel("npts")
+    
+    # Spectrogram + SHAP
+    axes[3].imshow(spectrogram, aspect='auto', origin='lower', extent=[t[0], t[1], f[0], f[1]])
+    im = axes[3].imshow(shap_tensor, cmap="coolwarm", alpha=np.clip(np.abs(shap_tensor) / alpha_normalizer, 0, 1), 
+                         aspect='auto', origin='lower', extent=[*t, *f], vmin=alpha_min, vmax=alpha_max)
+    axes[3].axvline(5, c='green', label=f'p-wave arrival', lw=2, alpha=1)
+    axes[3].axvline(alt_wave, c='green', ls="dotted", label=f"s-wave arrival", lw=2, alpha=1)
+    axes[3].legend(loc="upper right")
+    axes[3].set_ylabel("Frequency [Hz]")
+    
+    plt.xlabel('Time [s]')
+    plt.colorbar(im, ax=axes, orientation='vertical', label="Contribution to the prediction")
+    
+    if show:
+        plt.show()
+    if save_path:
+        plt.savefig(save_path, dpi=300, bbox_inches='tight')
+        plt.close(fig)
+
+
+def plot_wf_shap_dual(shap_tensor1, shap_tensor2,
+                               spectrogram1, spectrogram2,
+                               waveform1, waveform2,
+                               alt_wave1, alt_wave2,
+                               ft=None, alpha_min=None, alpha_max=None, 
+                               title = None, title1=None, title2=None,
+                               show=True, save_path=False, figsize=(15, 12)):
+    f, t = (ft[0], ft[1])
+    const = 100
+    waveform1 = waveform1[:, int(const * t[0]):int(const * t[1])]
+    waveform2 = waveform2[:, int(const * t[0]):int(const * t[1])]
+
+    if not alpha_max:
+        alpha_max = max(np.max(shap_tensor1), np.max(shap_tensor2))
+    if not alpha_min:
+        alpha_min = min(np.min(shap_tensor1), np.min(shap_tensor2))
+    alpha_normalizer = max(np.abs(alpha_min), np.abs(alpha_max))
+
+    fig, axes = plt.subplots(nrows=4, ncols=2, figsize=figsize, 
+                             gridspec_kw={'height_ratios': [1.5, 1.5, 1.5, 3], 'hspace': 0.2, 'wspace': 0.1}, sharex=True)
 
     label_dict = {0: "HHE", 1: "HHN", 2: "HHZ"}
+    maxy = max(np.max(waveform1), np.max(waveform2))
 
+    # Titles
+    axes[0, 0].set_title(title1)
+    axes[0, 1].set_title(title2)
+    
+    # Waveform plots
+    for ch in range(3):
+        for col, (waveform, alt_wave) in enumerate([(waveform1, alt_wave1), (waveform2, alt_wave2)]):
+            axes[ch, col].ticklabel_format(axis="y", style="sci", scilimits=(0, 0))
+            axes[ch, col].axvline(5, c='green', lw=2, alpha=1)
+            axes[ch, col].axvline(alt_wave, c='green', ls="dotted", lw=2, alpha=1)
+            axes[ch, col].plot(np.linspace(t[0], t[1], waveform[ch].shape[0]), waveform[ch], lw=1, color="black", label=label_dict[ch])
+            axes[ch, col].set_xlim(t)
+            axes[ch, col].legend(loc="upper right")
+            axes[ch, col].set_ylim([-maxy, maxy])
+    
+    axes[1, 0].set_ylabel("npts")
+    
+    # Spectrogram + SHAP plots
+    for col, (spectro, shap, alt_wave) in enumerate([(spectrogram1, shap_tensor1, alt_wave1), (spectrogram2, shap_tensor2, alt_wave2)]):
+        axes[3, col].imshow(spectro, aspect='auto', origin='lower', extent=[t[0], t[1], f[0], f[1]])
+        im = axes[3, col].imshow(shap, cmap="coolwarm", alpha=np.clip(np.abs(shap) / alpha_normalizer, 0, 1), 
+                                 aspect='auto', origin='lower', extent=[*t, *f], vmin=alpha_min, vmax=alpha_max)
+        axes[3, col].axvline(5, c='green', label=f'p-wave arrival', lw=2, alpha=1)
+        axes[3, col].axvline(alt_wave, c='green', ls="dotted", label=f"s-wave arrival", lw=2, alpha=1)
+        axes[3, col].legend(loc="upper right")
+        axes[3, col].set_ylabel("Frequency [Hz]")
+    
+    plt.xlabel('Time [s]')
+    plt.colorbar(im, ax=axes[:, 1], orientation='vertical', label="Contribution to the prediction")
+    
+    if show:
+        plt.show()
+    if save_path:
+        plt.savefig(save_path, dpi=300, bbox_inches='tight')
+        plt.close(fig)
+
+
+def plot_wf_shap_extended(shap_tensor1, shap_tensor2,
+                          spectrogram, 
+                          waveform, alt_wave,
+                          ft=None, alpha_min=None, alpha_max=None, 
+                          title = None, subtitle1 = None, subtitle2 = None,
+                          show=True, save_path=False, figsize=(15, 15)):
+    #spectrogram = prepare_image_for_plot(spectrogram)
+    f, t = (ft[0], ft[1])
+
+    const = 100
+    waveform = waveform[:,int(const*t[0]):int(const*t[1])]
+
+    if not alpha_max:
+        alpha_max = max(np.max(shap_tensor1), np.max(shap_tensor2))
+    if not alpha_min:
+        alpha_min = min(np.min(shap_tensor1), np.min(shap_tensor2))
+    alpha_normalizer = max(np.abs(alpha_min), np.abs(alpha_max))
+
+    fig, axes = plt.subplots(nrows=5, ncols=1, figsize=figsize, 
+                             gridspec_kw={'height_ratios': [1.5, 1.5, 1.5, 4, 4], 'hspace': 0.3}, sharex=True)
+    fig.suptitle(title)
+
+    label_dict = {0: "HHE", 1: "HHN", 2: "HHZ"}
     maxy = np.max(waveform)
 
     for ch in range(3):
         axes[ch].ticklabel_format(axis="y", style="sci", scilimits=(0, 0))
-
         axes[ch].axvline(5, c='green', lw=2, alpha=1)
-        axes[ch].axvline(alt_wave, c='green', ls = "dotted", lw=2, alpha=1)
-
-        axes[ch].plot(np.linspace(t[0], t[1], waveform[ch].shape[0]), waveform[ch], lw=1, color="black", label = label_dict[ch])  
-        axes[ch].set_xlim(t)  # Ensures x-axis is properly aligned with the last plot
+        axes[ch].axvline(alt_wave, c='green', ls="dotted", lw=2, alpha=1)
+        axes[ch].plot(np.linspace(t[0], t[1], waveform[ch].shape[0]), waveform[ch], lw=1, color="black", label=label_dict[ch])  
+        axes[ch].set_xlim(t)
         axes[ch].legend(loc="upper right")
         axes[ch].set_ylim([-maxy, maxy])
-
+    
     axes[1].set_ylabel("npts")
-    # Plot the spectrogram in the 4th row
     
-    axes[3].imshow(
-        spectrogram,
-        aspect='auto',
-        origin='lower',
-        extent=[t[0], t[1], f[0], f[1]]
-    )
-
-    im = axes[3].imshow(
-        grayscale_shap_tensor, 
-        cmap="coolwarm", 
-        alpha=np.clip(np.abs(grayscale_shap_tensor)/alpha_normalizer, 0, 1), 
-        aspect='auto', 
-        origin='lower', 
-        extent=[*t, *f],
-        vmin=alpha_min,  # Fix color range
-        vmax=alpha_max
-        )
-    
-    axes[3].axvline(5, c='green', label=f'{type}-wave arrival', lw = 2, alpha = 1)
-    axes[3].axvline(alt_wave, c='green', ls = "dotted", label=f"{'s' if type == 'p' else 'p'}-wave arrival", lw = 2, alpha = 1)
+    # First spectrogram + SHAP
+    if subtitle1 != None:
+        axes[3].set_title(subtitle1)
+    axes[3].imshow(spectrogram, aspect='auto', origin='lower', extent=[t[0], t[1], f[0], f[1]])
+    im1 = axes[3].imshow(shap_tensor1, cmap="coolwarm", alpha=np.clip(np.abs(shap_tensor1)/alpha_normalizer, 0, 1), 
+                         aspect='auto', origin='lower', extent=[*t, *f], vmin=alpha_min, vmax=alpha_max)
+    axes[3].axvline(5, c='green', label=f'p-wave arrival', lw=2, alpha=1)
+    axes[3].axvline(alt_wave, c='green', ls="dotted", label=f"s-wave arrival", lw=2, alpha=1)
     axes[3].legend(loc="upper right")
     axes[3].set_ylabel("Frequency [Hz]")
-    plt.xlabel('Time [s]')
     
-    plt.colorbar(im, ax = axes, orientation='vertical', label="Contribution to the prediction")
+    # Second spectrogram + SHAP
+    if subtitle2 != None:
+        axes[4].set_title(subtitle2)
+    axes[4].imshow(spectrogram, aspect='auto', origin='lower', extent=[t[0], t[1], f[0], f[1]])
+    im2 = axes[4].imshow(shap_tensor2, cmap="coolwarm", alpha=np.clip(np.abs(shap_tensor2)/alpha_normalizer, 0, 1), 
+                         aspect='auto', origin='lower', extent=[*t, *f], vmin=alpha_min, vmax=alpha_max)
+    axes[4].axvline(5, c='green', label=f'p-wave arrival', lw=2, alpha=1)
+    axes[4].axvline(alt_wave, c='green', ls="dotted", label=f"s-wave arrival", lw=2, alpha=1)
+    axes[4].legend(loc="upper right")
+    axes[4].set_ylabel("Frequency [Hz]")
+    
+    plt.xlabel('Time [s]')
+    plt.colorbar(im2, ax=axes, orientation='vertical', label="Contribution to the prediction")
+    
     if show:
         plt.show()
     if save_path:
-        plt.savefig(save_path, dpi=300, bbox_inches='tight')  # Save if a path is provided
-        plt.close(fig)  # Close the figure to free memory
+        plt.savefig(save_path, dpi=300, bbox_inches='tight')
+        plt.close(fig)
