@@ -108,12 +108,13 @@ def compute_shap_tensor(model, sample, dim, device, max_evals=1000, masker_setti
 def plot_mean_shap_p(mean_shap_tensor,  
               ft, 
               hist=None, 
-              hist_bins = 50,
+              hist_bins=50,
               alpha_min=None, 
               alpha_max=None, 
-              title = False, 
+              title=False, 
               figsize=(15, 7),
-              save_path = False):
+              save_path=False,
+              legend = True):
     
     f, t = ft
 
@@ -123,25 +124,37 @@ def plot_mean_shap_p(mean_shap_tensor,
         alpha_min = np.min(np.abs(mean_shap_tensor))
     alpha_normalizer = max(np.abs(alpha_min), np.abs(alpha_max))
 
-    plt.figure(figsize=figsize)
-    plt.xlabel('Time [s]')
-    plt.ylabel('Frequency [Hz]')
-    plt.axvline(5, c='black', label = f'p-wave arrival', lw = 3, alpha = .3)
-    im = plt.imshow(
-                    mean_shap_tensor, 
-                    cmap="coolwarm", 
-                    alpha=np.clip(np.abs(mean_shap_tensor)/alpha_normalizer, 0, 1), 
-                    aspect='auto', 
-                    origin='lower', 
-                    extent=[*t, *f],
-                    vmin=alpha_min,  # Fix color range
-                    vmax=alpha_max
-                    )
+    fig, ax1 = plt.subplots(figsize=figsize)
+
+    # Spectrogram plot
+    ax1.set_xlabel('Time [s]')
+    ax1.set_ylabel('Frequency [Hz]')
+    ax1.axvline(5, c='black', label='P-wave arrival', lw=3, alpha=.3)
+    im = ax1.imshow(
+        mean_shap_tensor, 
+        cmap="coolwarm", 
+        alpha=np.clip(np.abs(mean_shap_tensor)/alpha_normalizer, 0, 1), 
+        aspect='auto', 
+        origin='lower', 
+        extent=[*t, *f],
+        vmin=alpha_min,  # Fix color range
+        vmax=alpha_max
+    )
+
+    # Create second y-axis for histogram
     if isinstance(hist, np.ndarray) and hist.size > 0:
-        plt.hist(hist, bins=hist_bins, alpha=0.3, color = "black", label=f"Distribution of s-wave arrival")
-    cbar = plt.colorbar(im, orientation="horizontal", pad=0.1)
+        ax2 = ax1.twinx()
+        ax2.set_ylabel("Distribution of S-wave arrival")
+        ax2.hist(hist, bins=hist_bins, alpha=0.3, color="black", label="S-wave arrival distribution")
+
+    cbar = plt.colorbar(im, ax=ax1, orientation="horizontal", pad=0.1)
     cbar.set_label("Contribution to the prediction")
-    plt.legend()
+    
+    if legend:
+        ax1.legend(loc='upper left')
+        if isinstance(hist, np.ndarray) and hist.size > 0:
+            ax2.legend(loc='upper right')
+
     plt.title(title)
 
     if not save_path:
@@ -151,15 +164,16 @@ def plot_mean_shap_p(mean_shap_tensor,
         plt.close()
 
 
+
 def plot_mean_shap_s(mean_shap_tensor,  
               ft, 
               hist=None, 
-              hist_bins = 50,
+              hist_bins=50,
               alpha_min=None, 
               alpha_max=None, 
-              title = False, 
+              title=False, 
               figsize=(15, 7),
-              save_path = False):
+              save_path=False):
     
     f, t = ft
     t = (0, 8)
@@ -170,25 +184,36 @@ def plot_mean_shap_s(mean_shap_tensor,
         alpha_min = np.min(np.abs(mean_shap_tensor))
     alpha_normalizer = max(np.abs(alpha_min), np.abs(alpha_max))
 
-    plt.figure(figsize=figsize)
-    plt.xlabel('Time [s]')
-    plt.ylabel('Frequency [Hz]')
-    plt.axvline(4, c='black', label = f's-wave arrival', lw = 3, alpha = .3)
-    im = plt.imshow(
-                    mean_shap_tensor, 
-                    cmap="coolwarm", 
-                    alpha=np.clip(np.abs(mean_shap_tensor)/alpha_normalizer, 0, 1), 
-                    aspect='auto', 
-                    origin='lower', 
-                    extent=[*t, *f],
-                    vmin=alpha_min,  # Fix color range
-                    vmax=alpha_max
-                    )
+    fig, ax1 = plt.subplots(figsize=figsize)
+
+    # Spectrogram plot
+    ax1.set_xlabel('Time [s]')
+    ax1.set_ylabel('Frequency [Hz]')
+    ax1.axvline(4, c='black', label='S-wave arrival', lw=3, alpha=.3)
+    im = ax1.imshow(
+        mean_shap_tensor, 
+        cmap="coolwarm", 
+        alpha=np.clip(np.abs(mean_shap_tensor)/alpha_normalizer, 0, 1), 
+        aspect='auto', 
+        origin='lower', 
+        extent=[*t, *f],
+        vmin=alpha_min,  # Fix color range
+        vmax=alpha_max
+    )
+
+    # Create second y-axis for histogram
     if isinstance(hist, np.ndarray) and hist.size > 0:
-        plt.hist(hist, bins=hist_bins, alpha=0.3, color = "black", label=f"Distribution of p-wave arrival")
-    cbar = plt.colorbar(im, orientation="horizontal", pad=0.1)
+        ax2 = ax1.twinx()
+        ax2.set_ylabel("Distribution of P-wave arrival")
+        ax2.hist(hist, bins=hist_bins, alpha=0.3, color="black", label="P-wave arrival distribution")
+
+    cbar = plt.colorbar(im, ax=ax1, orientation="horizontal", pad=0.1)
     cbar.set_label("Contribution to the prediction")
-    plt.legend()
+    
+    ax1.legend(loc='upper left')
+    if isinstance(hist, np.ndarray) and hist.size > 0:
+        ax2.legend(loc='upper right')
+
     plt.title(title)
 
     if not save_path:
@@ -316,9 +341,17 @@ def plot_wf_shap_extended(shap_tensor1, shap_tensor2,
                           waveform, alt_wave,
                           ft=None, alpha_min=None, alpha_max=None, 
                           title = None, subtitle1 = None, subtitle2 = None,
+                          overlap = True, h_space = .3,
                           show=True, save_path=False, figsize=(15, 15)):
     #spectrogram = prepare_image_for_plot(spectrogram)
     f, t = (ft[0], ft[1])
+
+    if overlap:
+        NUMROWS = 5
+        HEIGHTRATIO = [1.5, 1.5, 1.5, 4, 4]
+    else:
+        NUMROWS = 6
+        HEIGHTRATIO = [1.5, 1.5, 1.5, 4, 4, 4]
 
     const = 100
     waveform = waveform[:,int(const*t[0]):int(const*t[1])]
@@ -329,8 +362,8 @@ def plot_wf_shap_extended(shap_tensor1, shap_tensor2,
         alpha_min = min(np.min(shap_tensor1), np.min(shap_tensor2))
     alpha_normalizer = max(np.abs(alpha_min), np.abs(alpha_max))
 
-    fig, axes = plt.subplots(nrows=5, ncols=1, figsize=figsize, 
-                             gridspec_kw={'height_ratios': [1.5, 1.5, 1.5, 4, 4], 'hspace': 0.3}, sharex=True)
+    fig, axes = plt.subplots(nrows=NUMROWS, ncols=1, figsize=figsize, 
+                             gridspec_kw={'height_ratios': HEIGHTRATIO, 'hspace': h_space}, sharex=True)
     fig.suptitle(title)
 
     label_dict = {0: "HHE", 1: "HHN", 2: "HHZ"}
@@ -347,27 +380,53 @@ def plot_wf_shap_extended(shap_tensor1, shap_tensor2,
     
     axes[1].set_ylabel("npts")
     
-    # First spectrogram + SHAP
-    if subtitle1 != None:
-        axes[3].set_title(subtitle1)
-    axes[3].imshow(spectrogram, aspect='auto', origin='lower', extent=[t[0], t[1], f[0], f[1]])
-    im1 = axes[3].imshow(shap_tensor1, cmap="coolwarm", alpha=np.clip(np.abs(shap_tensor1)/alpha_normalizer, 0, 1), 
-                         aspect='auto', origin='lower', extent=[*t, *f], vmin=alpha_min, vmax=alpha_max)
-    axes[3].axvline(5, c='green', label=f'p-wave arrival', lw=2, alpha=1)
-    axes[3].axvline(alt_wave, c='green', ls="dotted", label=f"s-wave arrival", lw=2, alpha=1)
-    axes[3].legend(loc="upper right")
-    axes[3].set_ylabel("Frequency [Hz]")
+    if overlap:
+        # First spectrogram + SHAP
+        if subtitle1 != None:
+            axes[3].set_title(subtitle1)
+        axes[3].imshow(spectrogram, aspect='auto', origin='lower', extent=[t[0], t[1], f[0], f[1]])
+        im1 = axes[3].imshow(shap_tensor1, cmap="coolwarm", alpha=np.clip(np.abs(shap_tensor1)/alpha_normalizer, 0, 1), 
+                            aspect='auto', origin='lower', extent=[*t, *f], vmin=alpha_min, vmax=alpha_max)
+        axes[3].axvline(5, c='green', label=f'p-wave arrival', lw=2, alpha=1)
+        axes[3].axvline(alt_wave, c='green', ls="dotted", label=f"s-wave arrival", lw=2, alpha=1)
+        axes[3].legend(loc="upper right")
+        axes[3].set_ylabel("Frequency [Hz]")
+        
+        # Second spectrogram + SHAP
+        if subtitle2 != None:
+            axes[4].set_title(subtitle2)
+        axes[4].imshow(spectrogram, aspect='auto', origin='lower', extent=[t[0], t[1], f[0], f[1]])
+        im2 = axes[4].imshow(shap_tensor2, cmap="coolwarm", alpha=np.clip(np.abs(shap_tensor2)/alpha_normalizer, 0, 1), 
+                            aspect='auto', origin='lower', extent=[*t, *f], vmin=alpha_min, vmax=alpha_max)
+        axes[4].axvline(5, c='green', label=f'p-wave arrival', lw=2, alpha=1)
+        axes[4].axvline(alt_wave, c='green', ls="dotted", label=f"s-wave arrival", lw=2, alpha=1)
+        axes[4].legend(loc="upper right")
+        axes[4].set_ylabel("Frequency [Hz]")
     
-    # Second spectrogram + SHAP
-    if subtitle2 != None:
-        axes[4].set_title(subtitle2)
-    axes[4].imshow(spectrogram, aspect='auto', origin='lower', extent=[t[0], t[1], f[0], f[1]])
-    im2 = axes[4].imshow(shap_tensor2, cmap="coolwarm", alpha=np.clip(np.abs(shap_tensor2)/alpha_normalizer, 0, 1), 
-                         aspect='auto', origin='lower', extent=[*t, *f], vmin=alpha_min, vmax=alpha_max)
-    axes[4].axvline(5, c='green', label=f'p-wave arrival', lw=2, alpha=1)
-    axes[4].axvline(alt_wave, c='green', ls="dotted", label=f"s-wave arrival", lw=2, alpha=1)
-    axes[4].legend(loc="upper right")
-    axes[4].set_ylabel("Frequency [Hz]")
+    else:
+        axes[3].imshow(spectrogram, aspect='auto', origin='lower', extent=[t[0], t[1], f[0], f[1]])
+        axes[3].axvline(5, c='green', label=f'p-wave arrival', lw=2, alpha=1)
+        axes[3].axvline(alt_wave, c='green', ls="dotted", label=f"s-wave arrival", lw=2, alpha=1)
+        axes[3].legend(loc="upper right")
+        axes[3].set_ylabel("Frequency [Hz]")
+
+        if subtitle1 != None:
+            axes[4].set_title(subtitle1)
+        im1 = axes[4].imshow(shap_tensor1, cmap="coolwarm", alpha=np.clip(np.abs(shap_tensor1)/alpha_normalizer, 0, 1), 
+                            aspect='auto', origin='lower', extent=[*t, *f], vmin=alpha_min, vmax=alpha_max)
+        axes[4].axvline(5, c='green', label=f'p-wave arrival', lw=2, alpha=1)
+        axes[4].axvline(alt_wave, c='green', ls="dotted", label=f"s-wave arrival", lw=2, alpha=1)
+        axes[4].set_ylabel("Frequency [Hz]")
+
+
+        if subtitle2 != None:
+            axes[5].set_title(subtitle2)
+        im2 = axes[5].imshow(shap_tensor2, cmap="coolwarm", alpha=np.clip(np.abs(shap_tensor2)/alpha_normalizer, 0, 1), 
+                            aspect='auto', origin='lower', extent=[*t, *f], vmin=alpha_min, vmax=alpha_max)
+        axes[5].axvline(5, c='green', label=f'p-wave arrival', lw=2, alpha=1)
+        axes[5].axvline(alt_wave, c='green', ls="dotted", label=f"s-wave arrival", lw=2, alpha=1)
+        axes[5].set_ylabel("Frequency [Hz]")
+
     
     plt.xlabel('Time [s]')
     plt.colorbar(im2, ax=axes, orientation='vertical', label="Contribution to the prediction")
