@@ -114,7 +114,8 @@ def plot_mean_shap_p(mean_shap_tensor,
               title=False, 
               figsize=(15, 7),
               save_path=False,
-              legend = True):
+              legend = True,
+              symmetric_cbar=True):
     
     f, t = ft
 
@@ -123,6 +124,9 @@ def plot_mean_shap_p(mean_shap_tensor,
     if not alpha_min:
         alpha_min = np.min(np.abs(mean_shap_tensor))
     alpha_normalizer = max(np.abs(alpha_min), np.abs(alpha_max))
+    if symmetric_cbar:
+        alpha_max = max(np.abs(alpha_min), np.abs(alpha_max))
+        alpha_min = -alpha_max
 
     fig, ax1 = plt.subplots(figsize=figsize)
 
@@ -173,7 +177,8 @@ def plot_mean_shap_s(mean_shap_tensor,
               alpha_max=None, 
               title=False, 
               figsize=(15, 7),
-              save_path=False):
+              save_path=False,
+              symmetric_cbar=True):
     
     f, t = ft
     t = (0, 8)
@@ -183,6 +188,10 @@ def plot_mean_shap_s(mean_shap_tensor,
     if not alpha_min:
         alpha_min = np.min(np.abs(mean_shap_tensor))
     alpha_normalizer = max(np.abs(alpha_min), np.abs(alpha_max))
+
+    if symmetric_cbar:
+        alpha_max = max(np.abs(alpha_min), np.abs(alpha_max))
+        alpha_min = -alpha_max
 
     fig, ax1 = plt.subplots(figsize=figsize)
 
@@ -226,7 +235,8 @@ def plot_mean_shap_s(mean_shap_tensor,
 
 def plot_wf_shap_single(shap_tensor, spectrogram, waveform, alt_wave,
                          ft=None, alpha_min=None, alpha_max=None, 
-                         title=None, show=True, save_path=False, figsize=(10, 10)):
+                         title=None, show=True, save_path=False, figsize=(10, 10),
+                         symmetric_cbar=True):
     f, t = (ft[0], ft[1])
     const = 100
     waveform = waveform[:, int(const * t[0]):int(const * t[1])]
@@ -236,6 +246,10 @@ def plot_wf_shap_single(shap_tensor, spectrogram, waveform, alt_wave,
     if not alpha_min:
         alpha_min = np.min(shap_tensor)
     alpha_normalizer = max(np.abs(alpha_min), np.abs(alpha_max))
+
+    if symmetric_cbar:
+        alpha_max = max(np.abs(alpha_min), np.abs(alpha_max))
+        alpha_min = -alpha_max
 
     fig, axes = plt.subplots(nrows=4, ncols=1, figsize=figsize, 
                              gridspec_kw={'height_ratios': [1.5, 1.5, 1.5, 4], 'hspace': 0.3}, sharex=True)
@@ -281,7 +295,8 @@ def plot_wf_shap_dual(shap_tensor1, shap_tensor2,
                                alt_wave1, alt_wave2,
                                ft=None, alpha_min=None, alpha_max=None, 
                                title = None, title1=None, title2=None,
-                               show=True, save_path=False, figsize=(15, 12)):
+                               show=True, save_path=False, figsize=(15, 12),
+                               symmetric_cbar=True):
     f, t = (ft[0], ft[1])
     const = 100
     waveform1 = waveform1[:, int(const * t[0]):int(const * t[1])]
@@ -292,6 +307,10 @@ def plot_wf_shap_dual(shap_tensor1, shap_tensor2,
     if not alpha_min:
         alpha_min = min(np.min(shap_tensor1), np.min(shap_tensor2))
     alpha_normalizer = max(np.abs(alpha_min), np.abs(alpha_max))
+
+    if symmetric_cbar:
+        alpha_max = max(np.abs(alpha_min), np.abs(alpha_max))
+        alpha_min = -alpha_max
 
     fig, axes = plt.subplots(nrows=4, ncols=2, figsize=figsize, 
                              gridspec_kw={'height_ratios': [1.5, 1.5, 1.5, 3], 'hspace': 0.2, 'wspace': 0.1}, sharex=True)
@@ -342,7 +361,7 @@ def plot_wf_shap_extended(shap_tensor1, shap_tensor2,
                           ft=None, alpha_min=None, alpha_max=None, 
                           title = None, subtitle1 = None, subtitle2 = None,
                           overlap = True, h_space = .3,
-                          show=True, save_path=False, figsize=(15, 15)):
+                          show=True, save_path=False, figsize=(15, 15), symmetric_cbar = True):
     #spectrogram = prepare_image_for_plot(spectrogram)
     f, t = (ft[0], ft[1])
 
@@ -361,6 +380,9 @@ def plot_wf_shap_extended(shap_tensor1, shap_tensor2,
     if not alpha_min:
         alpha_min = min(np.min(shap_tensor1), np.min(shap_tensor2))
     alpha_normalizer = max(np.abs(alpha_min), np.abs(alpha_max))
+    if symmetric_cbar:
+        alpha_max = max(np.abs(alpha_min), np.abs(alpha_max))
+        alpha_min = -alpha_max
 
     fig, axes = plt.subplots(nrows=NUMROWS, ncols=1, figsize=figsize, 
                              gridspec_kw={'height_ratios': HEIGHTRATIO, 'hspace': h_space}, sharex=True)
