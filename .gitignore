@@ -2,6 +2,7 @@ dset
 __pycache__
 CNN_EQML
 preprocessed_dset
+preprocessed_dset.zip
 training/lightning_logs
 training/__pycache__
 preprocess/__pycache__
