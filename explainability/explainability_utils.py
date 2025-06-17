@@ -23,6 +23,7 @@ torch.cuda.manual_seed_all(SEED)
 torch.backends.cudnn.deterministic = True
 torch.backends.cudnn.benchmark = False
 pl.seed_everything(SEED)
+os.environ['PYTHONHASHSEED'] = str(SEED)
 
 # Setting for the datasets
 mean, std = spectra_stats("../preprocessed_dset/spectrograms", "../preprocessed_dset/metadata.csv")

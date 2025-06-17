@@ -25,6 +25,7 @@ torch.cuda.manual_seed_all(SEED)
 torch.backends.cudnn.deterministic = True
 torch.backends.cudnn.benchmark = False
 pl.seed_everything(SEED)
+os.environ["PYTHONHASHSEED"] = str(SEED)
 
 def calculate_and_save_stats(data_path, metadata, stats_file):
     print("Calculating dataset statistics for normalization...")

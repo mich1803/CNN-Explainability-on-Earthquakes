@@ -1,12 +1,22 @@
+# DSET AVAILABLE ON ZENODO
 dset
-__pycache__
-CNN_EQML
+dset.zip
 preprocessed_dset
 preprocessed_dset.zip
-training/lightning_logs
-training/__pycache__
-preprocess/__pycache__
-explainability/__pycache__
+
+# VIRTUAL ENVIRONMENT
+__pycache__
+**/__pycache__
+CNN_EQML
+
+# PIPELINE OUTPUTs (AVAILABLE IN .zip)
+training/model_checkpoints/
+explainability/samples/
+explainability/shap_tensors/
+
+# PLOTS
 plots
-dset.zip
 plots.zip
+
+# TRAINING LOGS
+training/lightning_logs/
