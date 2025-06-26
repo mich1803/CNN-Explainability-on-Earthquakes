@@ -6,7 +6,7 @@ This project explores the application of explainability techniques in deep learn
 ## How to Use  
 
 1. **Download the Dataset**  
-   The dataset can be downloaded from Zenodo: [Zenodo Dataset DOI Placeholder]
+   The dataset can be downloaded from Zenodo: [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.15683047.svg)](https://doi.org/10.5281/zenodo.15683047) 
 
 2. **Clone the repository**  
    ```bash  
@@ -57,7 +57,6 @@ This project explores the application of explainability techniques in deep learn
 
 ---
 
-## References  
-
-1. **Laurenti, Paolini et al. (Nature 2024)**  
-   - [***Probing the Evolution of Fault Properties During the Seismic Cycle with Deep Learning***](https://www.nature.com/articles/s41467-024-54153-w)
+## Zenodo Repositories
+  - Code Repo:    [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.15747240.svg)](https://doi.org/10.5281/zenodo.15747240) 
+  - Data Repo:    [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.15683047.svg)](https://doi.org/10.5281/zenodo.15683047) 
