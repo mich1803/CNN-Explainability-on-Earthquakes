@@ -33,7 +33,7 @@ This project explores the application of explainability techniques in deep learn
 
 1. **Preprocessing**  
    - Run `preprocessing/preprocess.ipynb` to generate RGB spectrograms from raw waveform data in `dset/`.  
-   - ⚠️ *You can skip this step by unzipping `dset_preprocessed.zip`, also available on Zenodo: [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.15747240.svg)](https://doi.org/10.5281/zenodo.15747240)*
+   - ⚠️ *You can skip this step by unzipping `dset_preprocessed.zip`, also available on Zenodo: [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.15683047.svg)](https://doi.org/10.5281/zenodo.15683047) *
 
 2. **Training**  
    - Use `training/training.ipynb` to train the CNN with cross-validation on the preprocessed dataset.  
