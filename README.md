@@ -57,6 +57,9 @@ This project explores the application of explainability techniques in deep learn
 
 ---
 
+## Conference Paper (ICIAP 2025):
+https://doi.org/10.1007/978-3-032-10185-3_25
+
 ## Zenodo Repositories
   - Code Repo:    [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.15747240.svg)](https://doi.org/10.5281/zenodo.15747240) 
   - Data Repo:    [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.15683047.svg)](https://doi.org/10.5281/zenodo.15683047) 
