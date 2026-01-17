@@ -62,4 +62,9 @@ https://doi.org/10.1007/978-3-032-10185-3_25
 
 ## Zenodo Repositories
   - Code Repo:    [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.15747240.svg)](https://doi.org/10.5281/zenodo.15747240) 
-  - Data Repo:    [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.15683047.svg)](https://doi.org/10.5281/zenodo.15683047) 
+  - Data Repo:    [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.15683047.svg)](https://doi.org/10.5281/zenodo.15683047)
+
+## Updated Codebase
+The CNN-Explainability-on-Earthquakes got Updated and Reordered, you can find the new version (SeismoXAI) clicking on the header below.
+
+<a href="https://github.com/FRAMAX444/SeismoXAI">![SeismoXAI Header](https://github.com/FRAMAX444/SeismoXAI/blob/main/media/header.png?raw=true)</a>
